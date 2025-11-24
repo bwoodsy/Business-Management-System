@@ -1,7 +1,7 @@
 using BusinessManagementSystem.Api.Data;
+using BusinessManagementSystem.Api.Services;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.IO;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +13,8 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IProductService, ProductService>();
 
 var app = builder.Build();
 
