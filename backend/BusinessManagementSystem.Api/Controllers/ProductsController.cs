@@ -1,68 +1,97 @@
-using Microsoft.AspNetCore.Mvc;
-using BusinessManagementSystem.Api.Models;
-using BusinessManagementSystem.Api.Services;
 using BusinessManagementSystem.Api.Data;
+using BusinessManagementSystem.Api.Dtos;
+using BusinessManagementSystem.Api.Mappings;
+using BusinessManagementSystem.Api.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusinessManagementSystem.Api.Controllers;
 
-[ApiController] // tells ASP.NET that this is a web controller
-[Route("api/[controller]")] // controller become Products so "api/products"
-public class ProductsController : ControllerBase // ControllerBase gives us helpers
+[ApiController]
+[Route("api/[controller]")]
+public class ProductsController : ControllerBase
 {
-    private readonly IProductService _productService;
+    private readonly AppDbContext _context;
 
-    public ProductsController(IProductService productService)
+    public ProductsController(AppDbContext context)
     {
-        _productService = productService;
+        _context = context;
     }
 
+    // GET: api/products
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetAll()
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
     {
-        var products = await _productService.GetAllAsync();
-        return Ok(products);
+        var products = await _context.Products
+            .AsNoTracking()
+            .Include(p => p.Category)              // needed for CategoryName
+            .OrderBy(p => p.Name)
+            .ToListAsync();
+
+        return Ok(products.Select(p => p.ToDto()));
     }
 
-
+    // GET: api/products/5
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Product>> GetById(int id)
+    public async Task<ActionResult<ProductDto>> GetById(int id)
     {
-        var product = await _productService.GetByIdAsync(id);
+        var product = await _context.Products
+            .AsNoTracking()
+            .Include(p => p.Category)
+            .FirstOrDefaultAsync(p => p.Id == id);
 
-        if (product == null)
-            return NotFound();
+        if (product == null) return NotFound();
 
-        return Ok(product);
+        return Ok(product.ToDto());
     }
 
+    // POST: api/products
     [HttpPost]
-    public async Task<ActionResult<Product>> AddProduct(Product product)
+    public async Task<ActionResult<ProductDto>> Create(CreateProductDto dto)
     {
-        var created = await _productService.AddAsync(product);
+        // optional: validate category exists (nice polish)
+        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
+        if (!categoryExists)
+            return BadRequest(new { message = $"CategoryId {dto.CategoryId} does not exist." });
 
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        var product = dto.ToEntity();
+
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        // Reload with category so CategoryName is populated
+        await _context.Entry(product).Reference(p => p.Category).LoadAsync();
+
+        return CreatedAtAction(nameof(GetById), new { id = product.Id }, product.ToDto());
     }
 
+    // PUT: api/products/5
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> UpdateProduct(int id, Product updatedProduct)
+    public async Task<IActionResult> Update(int id, UpdateProductDto dto)
     {
-        var updated = await _productService.UpdateAsync(id, updatedProduct);
+        var product = await _context.Products.FindAsync(id);
+        if (product == null) return NotFound();
 
-        if (!updated)
-            return NotFound();
+        // optional: validate category exists
+        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
+        if (!categoryExists)
+            return BadRequest(new { message = $"CategoryId {dto.CategoryId} does not exist." });
 
+        dto.Apply(product);
+
+        await _context.SaveChangesAsync();
         return NoContent();
     }
 
-
+    // DELETE: api/products/5
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteProduct(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _productService.DeleteAsync(id);
+        var product = await _context.Products.FindAsync(id);
+        if (product == null) return NotFound();
 
-        if (!deleted)
-            return NotFound();
+        _context.Products.Remove(product);
+        await _context.SaveChangesAsync();
 
         return NoContent();
     }
