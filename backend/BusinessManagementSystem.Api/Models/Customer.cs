@@ -15,7 +15,6 @@ namespace BusinessManagementSystem.Api.Models;
     [EmailAddress]
      public string Email { get; set; } = string.Empty;
     
-    [Required]
     [Phone]
      public string PhoneNumber { get; set; } = string.Empty;
 
