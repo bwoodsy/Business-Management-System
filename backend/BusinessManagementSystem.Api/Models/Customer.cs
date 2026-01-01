@@ -18,6 +18,6 @@ namespace BusinessManagementSystem.Api.Models;
     [Phone]
      public string PhoneNumber { get; set; } = string.Empty;
 
-     public List<RepairJob> RepairJobs { get; set; } = new();
+     public List<RepairJob> RepairJobs { get; set; } = new List<RepairJob>();
 
  }
