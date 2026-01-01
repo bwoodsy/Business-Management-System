@@ -6,22 +6,17 @@ public class RepairJob
 {
     public int Id { get; set; }
 
-    public Product Product { get; set; } = null!;
-
-    public string Description { get; set; } = string.Empty;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public DateTime? CompletedAt { get; set; }
+    // optional but recommended
+    public int? CustomerId { get; set; }
+    public Customer? Customer { get; set; }
 
-    public decimal TimeSpent { get; set; }
+    [Range(0.01, 1000000)]
+    public decimal SalePrice { get; set; }
 
-    public decimal JobCost { get; set; } 
+    [MaxLength(500)]
+    public string? Notes { get; set; }
 
-    public decimal PartsCost { get; set; }
-
-    public decimal labourCost { get; set; }
-
-    public Customer Customer { get; set; } = null!;
-
+    public List<RepairJobItem> Items { get; set; } = new();
 }
