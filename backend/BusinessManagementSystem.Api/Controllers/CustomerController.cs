@@ -3,9 +3,11 @@ using BusinessManagementSystem.Api.Dtos;
 using BusinessManagementSystem.Api.Mappings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BusinessManagementSystem.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class CustomersController : ControllerBase

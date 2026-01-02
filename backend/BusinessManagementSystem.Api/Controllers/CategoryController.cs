@@ -4,9 +4,11 @@ using BusinessManagementSystem.Api.Mappings;
 using BusinessManagementSystem.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BusinessManagementSystem.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class CategoriesController : ControllerBase
