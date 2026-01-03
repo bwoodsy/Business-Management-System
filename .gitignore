@@ -370,6 +370,9 @@ ASALocalRun/
 # Visual Studio History (VSHistory) files
 .vshistory/
 
+# Visual Studio launch settings (contains sensitive data like secrets)
+**/Properties/launchSettings.json
+
 # BeatPulse healthcheck temp database
 healthchecksdb
 
