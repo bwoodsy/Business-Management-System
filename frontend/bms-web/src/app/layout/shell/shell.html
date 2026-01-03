@@ -1,1 +1,40 @@
-<p>shell works!</p>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">BMS</div>
+      <div>
+        <div class="brand-title">Business Ops</div>
+        <div class="brand-subtitle">Inventory hub</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a routerLink="/products" routerLinkActive="active">Inventory</a>
+      <a routerLink="/jobs" routerLinkActive="active">Jobs</a>
+      <a routerLink="/analytics" routerLinkActive="active">Analytics</a>
+    </nav>
+
+    <div class="sidebar-card">
+      <div class="sidebar-label">Signed in as</div>
+      <div class="sidebar-user">{{ auth.user()?.username || 'Loading...' }}</div>
+      <button class="ghost" type="button" (click)="logout()">Log out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Operations</div>
+        <h1>Inventory Control</h1>
+      </div>
+      <div class="topbar-meta">
+        <span class="pulse"></span>
+        <span>Live sync</span>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
