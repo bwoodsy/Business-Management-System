@@ -1,0 +1,236 @@
+.analytics {
+  display: grid;
+  gap: 24px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.page-head h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.subhead {
+  margin: 6px 0 0;
+  color: var(--muted);
+  max-width: 420px;
+}
+
+.range {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.range button {
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.range button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: #fff;
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.metric-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.metric-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.metric-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.panel.wide {
+  grid-column: 1 / -1;
+}
+
+.panel-head h3 {
+  margin: 0;
+}
+
+.panel-head p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.chart {
+  display: grid;
+  gap: 12px;
+}
+
+.chart svg {
+  width: 100%;
+  height: 180px;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.line.sales {
+  stroke: var(--accent);
+}
+
+.line.profit {
+  stroke: var(--accent-warm);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.dot.sales {
+  background: var(--accent);
+}
+
+.dot.profit {
+  background: var(--accent-warm);
+}
+
+.bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(40px, 1fr);
+  gap: 10px;
+  align-items: end;
+  min-height: 180px;
+}
+
+.bar {
+  display: grid;
+  gap: 6px;
+  align-items: end;
+  justify-items: center;
+}
+
+.bar-stack {
+  width: 100%;
+  height: 140px;
+  display: grid;
+  align-content: end;
+  gap: 4px;
+}
+
+.bar-part,
+.bar-profit {
+  width: 100%;
+  border-radius: 999px;
+}
+
+.bar-part {
+  background: rgba(15, 127, 108, 0.2);
+}
+
+.bar-profit {
+  background: rgba(242, 157, 56, 0.4);
+}
+
+.bar-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.summary-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.summary-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.state {
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(242, 157, 56, 0.12);
+  color: #7b4b10;
+}
+
+.state.error {
+  background: rgba(169, 45, 45, 0.12);
+  color: #8a2a2a;
+}
+
+@media (max-width: 1024px) {
+  .analytics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bars {
+    grid-auto-columns: minmax(32px, 1fr);
+  }
+}

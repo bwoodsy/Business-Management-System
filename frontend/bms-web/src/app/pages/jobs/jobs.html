@@ -1,0 +1,232 @@
+<section class="jobs">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Service Desk</p>
+      <h2>Repair Jobs</h2>
+      <p class="subhead">Track every job, margin, and part used from one console.</p>
+    </div>
+  </div>
+
+  <div class="jobs-grid">
+    <div class="panel">
+      <div class="panel-head">
+        <h3>New job</h3>
+        <p>Record a new repair and consume inventory.</p>
+      </div>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Sale price</span>
+          <input type="number" min="0" step="0.01" [(ngModel)]="newJob.salePrice" [ngModelOptions]="{standalone: true}" />
+        </label>
+        <label class="field">
+          <span>Customer</span>
+          <select [(ngModel)]="newJob.customerId" [ngModelOptions]="{standalone: true}">
+            <option [ngValue]="null">Walk-in / guest</option>
+            <option *ngFor="let customer of customers" [ngValue]="customer.id">
+              {{ customer.firstName }} {{ customer.lastName }}
+            </option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Notes</span>
+          <textarea rows="2" [(ngModel)]="newJob.notes" [ngModelOptions]="{standalone: true}"></textarea>
+        </label>
+      </div>
+
+      <div class="inline-customer">
+        <div>
+          <div class="inline-title">New customer</div>
+          <div class="inline-subtitle">Add details and attach to this job.</div>
+        </div>
+        <div class="field-grid">
+          <label class="field">
+            <span>First name</span>
+            <input [(ngModel)]="newCustomer.firstName" [ngModelOptions]="{standalone: true}" />
+          </label>
+          <label class="field">
+            <span>Last name</span>
+            <input [(ngModel)]="newCustomer.lastName" [ngModelOptions]="{standalone: true}" />
+          </label>
+        </div>
+        <div class="field-grid">
+          <label class="field">
+            <span>Email</span>
+            <input type="email" [(ngModel)]="newCustomer.email" [ngModelOptions]="{standalone: true}" />
+          </label>
+          <label class="field">
+            <span>Phone</span>
+            <input type="tel" [(ngModel)]="newCustomer.phoneNumber" [ngModelOptions]="{standalone: true}" />
+          </label>
+        </div>
+        <button class="ghost" type="button" (click)="submitCustomer()">Add customer</button>
+      </div>
+
+      <div class="items">
+        <div class="items-head">
+          <h4>Line items</h4>
+          <button type="button" class="ghost" (click)="addItemRow()">Add line</button>
+        </div>
+
+        <div class="item-row" *ngFor="let item of jobItems; index as i">
+          <select [(ngModel)]="item.productId" [ngModelOptions]="{standalone: true}">
+            <option [ngValue]="null">Select product</option>
+            <option *ngFor="let product of products" [ngValue]="product.id">
+              {{ product.name }}
+            </option>
+          </select>
+          <input type="number" min="1" step="1" [(ngModel)]="item.quantity" [ngModelOptions]="{standalone: true}" />
+          <div class="line-value">{{ formatMoney(calculateLineCost(item)) }}</div>
+          <button type="button" class="icon" (click)="removeItemRow(i)" [disabled]="jobItems.length === 1">x</button>
+        </div>
+      </div>
+
+      <button class="primary full" type="button" (click)="submitJob()" [disabled]="creating">
+        {{ creating ? 'Saving...' : 'Create job' }}
+      </button>
+
+      <div class="form-message" *ngIf="formMessage">{{ formMessage }}</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Quick add</h3>
+        <p>Keep inventory and categories fresh while logging jobs.</p>
+      </div>
+
+      <div class="quick-card">
+        <h4>New product</h4>
+        <label class="field">
+          <span>Name</span>
+          <input [(ngModel)]="newProduct.name" [ngModelOptions]="{standalone: true}" />
+        </label>
+        <div class="field-grid">
+          <label class="field">
+            <span>Price</span>
+            <input type="number" min="0" step="0.01" [(ngModel)]="newProduct.price" [ngModelOptions]="{standalone: true}" />
+          </label>
+          <label class="field">
+            <span>Stock</span>
+            <input type="number" min="0" step="1" [(ngModel)]="newProduct.stock" [ngModelOptions]="{standalone: true}" />
+          </label>
+        </div>
+        <label class="field">
+          <span>Category</span>
+          <select [(ngModel)]="newProduct.categoryId" [ngModelOptions]="{standalone: true}">
+            <option [ngValue]="0">Select category</option>
+            <option *ngFor="let category of categories" [ngValue]="category.id">
+              {{ category.name }}
+            </option>
+          </select>
+        </label>
+        <button class="ghost full" type="button" (click)="submitProduct()">Add product</button>
+      </div>
+
+      <div class="quick-card">
+        <h4>New category</h4>
+        <label class="field">
+          <span>Name</span>
+          <input [(ngModel)]="newCategory.name" [ngModelOptions]="{standalone: true}" />
+        </label>
+        <button class="ghost full" type="button" (click)="submitCategory()">Add category</button>
+      </div>
+    </div>
+
+    <div class="panel wide kanban">
+      <div class="panel-head">
+        <h3>Job board</h3>
+        <p>Drag cards to update status.</p>
+      </div>
+
+      <div class="state" *ngIf="loading && jobs.length === 0">Loading jobs...</div>
+      <div class="state error" *ngIf="error">{{ error }}</div>
+
+      <div class="kanban-board">
+        <div
+          class="kanban-column"
+          *ngFor="let status of statuses"
+          (dragover)="onDragOver($event, status.key)"
+          (dragleave)="onDragLeave()"
+          (drop)="onDrop($event, status.key)"
+          [class.is-over]="dragOverStatus === status.key"
+        >
+          <div class="kanban-head">
+            <h4>{{ status.label }}</h4>
+            <span>{{ jobsByStatus(status.key).length }}</span>
+          </div>
+          <div class="kanban-list">
+            <div
+              class="kanban-card"
+              *ngFor="let job of jobsByStatus(status.key); trackBy: trackJob"
+              draggable="true"
+              (dragstart)="onDragStart(job)"
+            >
+              <div class="card-title">#{{ job.id }} - {{ job.customerName || 'Walk-in' }}</div>
+              <div class="card-sub">
+                {{ job.items.length }} items - {{ formatMoney(job.salePrice) }}
+              </div>
+              <div class="card-foot">
+                <span>{{ job.createdAt | date: 'MMM d' }}</span>
+                <span class="pill" [class.loss]="job.profit < 0">{{ formatMoney(job.profit) }}</span>
+              </div>
+              <div class="card-items">
+                <div *ngFor="let item of job.items">
+                  {{ item.quantity }}x {{ item.productName }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel wide archive">
+      <div class="panel-head">
+        <div>
+          <h3>Completed archive</h3>
+          <p>Sortable list with return tracking.</p>
+        </div>
+        <div class="archive-controls">
+          <label>
+            Sort by
+            <select [(ngModel)]="archiveSort" [ngModelOptions]="{standalone: true}">
+              <option value="recent">Most recent</option>
+              <option value="profit">Highest profit</option>
+              <option value="sale">Highest sale</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="archive-table" *ngIf="archiveJobs().length > 0">
+        <div class="archive-head">
+          <span>ID</span>
+          <span>Completed</span>
+          <span>Customer</span>
+          <span>Sale</span>
+          <span>Parts</span>
+          <span>Profit</span>
+          <span>Return</span>
+        </div>
+        <div class="archive-row" *ngFor="let job of archiveJobs(); trackBy: trackJob">
+          <div class="cell">#{{ job.id }}</div>
+          <div class="cell">{{ job.completedAt ? (job.completedAt | date: 'mediumDate') : (job.createdAt | date: 'mediumDate') }}</div>
+          <div class="cell">{{ job.customerName || 'Walk-in' }}</div>
+          <div class="cell">{{ formatMoney(job.salePrice) }}</div>
+          <div class="cell">{{ formatMoney(job.partsCost) }}</div>
+          <div class="cell">
+            <span class="pill" [class.loss]="job.profit < 0">{{ formatMoney(job.profit) }}</span>
+          </div>
+          <div class="cell">
+            <button class="ghost" type="button" (click)="markReturned(job)" [disabled]="job.isReturnedToCustomer">
+              {{ job.isReturnedToCustomer ? 'Returned' : 'Mark returned' }}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="empty" *ngIf="archiveJobs().length === 0">
+        No completed jobs yet.
+      </div>
+    </div>
+  </div>
+</section>

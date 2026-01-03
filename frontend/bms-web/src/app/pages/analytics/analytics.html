@@ -1,0 +1,98 @@
+<section class="analytics">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Insights</p>
+      <h2>Analytics</h2>
+      <p class="subhead">Monitor revenue, cost, and profit trends across time.</p>
+    </div>
+    <div class="range">
+      <button type="button" [class.active]="range() === '7d'" (click)="setRange('7d')">Last 7 days</button>
+      <button type="button" [class.active]="range() === '30d'" (click)="setRange('30d')">Last 30 days</button>
+      <button type="button" [class.active]="range() === '365d'" (click)="setRange('365d')">Last 12 months</button>
+    </div>
+  </div>
+
+  <div class="state" *ngIf="loading()">Loading analytics...</div>
+  <div class="state error" *ngIf="error()">{{ error() }}</div>
+
+  <div class="analytics-grid" *ngIf="!loading() && !error()">
+    <div class="metric-card">
+      <div class="metric-label">Total sales</div>
+      <div class="metric-value">{{ formatMoney(totals().totalSales) }}</div>
+      <div class="metric-sub">Avg ticket {{ formatMoney(totals().avgSale) }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Parts cost</div>
+      <div class="metric-value">{{ formatMoney(totals().partsCost) }}</div>
+      <div class="metric-sub">Based on product costs</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Profit</div>
+      <div class="metric-value">{{ formatMoney(totals().profit) }}</div>
+      <div class="metric-sub">Margin {{ formatPercent(totals().margin) }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Labor time</div>
+      <div class="metric-value">Not tracked</div>
+      <div class="metric-sub">Add labor tracking to jobs to enable.</div>
+    </div>
+
+    <div class="panel wide">
+      <div class="panel-head">
+        <h3>Revenue vs profit</h3>
+        <p>Sales and profit trend per period.</p>
+      </div>
+      <div class="chart">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polyline class="line sales" [attr.points]="series().salesPoints"></polyline>
+          <polyline class="line profit" [attr.points]="series().profitPoints"></polyline>
+        </svg>
+        <div class="legend">
+          <span class="dot sales"></span> Sales
+          <span class="dot profit"></span> Profit
+        </div>
+      </div>
+    </div>
+
+    <div class="panel wide">
+      <div class="panel-head">
+        <h3>Cost and profit breakdown</h3>
+        <p>Each period shows parts cost and profit.</p>
+      </div>
+      <div class="bars">
+        <div class="bar" *ngFor="let bucket of series().buckets">
+          <div class="bar-stack">
+            <span class="bar-part" [style.height.%]="barHeight(bucket.parts)"></span>
+            <span class="bar-profit" [style.height.%]="barHeight(bucket.profit)"></span>
+          </div>
+          <div class="bar-label">{{ bucket.label }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel wide">
+      <div class="panel-head">
+        <h3>Quick stats</h3>
+        <p>Totals for the selected period.</p>
+      </div>
+      <div class="summary">
+        <div>
+          <div class="summary-label">Jobs completed</div>
+          <div class="summary-value">{{ totals().count }}</div>
+        </div>
+        <div>
+          <div class="summary-label">Average ticket</div>
+          <div class="summary-value">{{ formatMoney(totals().avgSale) }}</div>
+        </div>
+        <div>
+          <div class="summary-label">Margin</div>
+          <div class="summary-value">{{ formatPercent(totals().margin) }}</div>
+        </div>
+        <div>
+          <div class="summary-label">Parts cost</div>
+          <div class="summary-value">{{ formatMoney(totals().partsCost) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
