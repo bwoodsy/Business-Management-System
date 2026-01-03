@@ -62,6 +62,7 @@ public class RepairJobService : IRepairJobService
             CustomerId = dto.CustomerId,
             SalePrice = dto.SalePrice,
             Notes = dto.Notes,
+            Status = "New",
             Items = dto.Items.Select(i => new RepairJobItem
             {
                 ProductId = i.ProductId,

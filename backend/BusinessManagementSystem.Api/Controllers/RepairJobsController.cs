@@ -15,6 +15,14 @@ public class RepairJobsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IRepairJobService _service;
+    private static readonly HashSet<string> AllowedStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "New",
+        "In Progress",
+        "Waiting Parts",
+        "Ready",
+        "Completed"
+    };
 
     public RepairJobsController(AppDbContext context, IRepairJobService service)
     {
@@ -65,5 +73,45 @@ public class RepairJobsController : ControllerBase
             // clean 400 for business rule failures
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    // PUT: api/repairjobs/5/status
+    [HttpPut("{id:int}/status")]
+    public async Task<IActionResult> UpdateStatus(int id, UpdateRepairJobStatusDto dto)
+    {
+        if (!AllowedStatuses.Contains(dto.Status))
+        {
+            return BadRequest(new { message = "Invalid status value." });
+        }
+
+        var job = await _context.RepairJobs.FirstOrDefaultAsync(j => j.Id == id);
+        if (job == null) return NotFound();
+
+        job.Status = AllowedStatuses.First(s => s.Equals(dto.Status, StringComparison.OrdinalIgnoreCase));
+
+        if (job.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+        {
+            job.CompletedAt ??= DateTime.UtcNow;
+        }
+        else
+        {
+            job.CompletedAt = null;
+            job.IsReturnedToCustomer = false;
+            job.ReturnedAt = null;
+        }
+
+        if (dto.IsReturnedToCustomer.HasValue)
+        {
+            if (!job.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { message = "Returned flag can only be set when status is Completed." });
+            }
+
+            job.IsReturnedToCustomer = dto.IsReturnedToCustomer.Value;
+            job.ReturnedAt = job.IsReturnedToCustomer ? DateTime.UtcNow : null;
+        }
+
+        await _context.SaveChangesAsync();
+        return NoContent();
     }
 }

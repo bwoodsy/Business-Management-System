@@ -14,6 +14,11 @@ public class RepairJobDto
 
     public string? Notes { get; set; }
 
+    public string Status { get; set; } = "New";
+    public DateTime? CompletedAt { get; set; }
+    public bool IsReturnedToCustomer { get; set; }
+    public DateTime? ReturnedAt { get; set; }
+
     public List<RepairJobItemDto> Items { get; set; } = new();
 }
 

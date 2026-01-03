@@ -18,5 +18,14 @@ public class RepairJob
     [MaxLength(500)]
     public string? Notes { get; set; }
 
+    [MaxLength(30)]
+    public string Status { get; set; } = "New";
+
+    public DateTime? CompletedAt { get; set; }
+
+    public bool IsReturnedToCustomer { get; set; }
+
+    public DateTime? ReturnedAt { get; set; }
+
     public List<RepairJobItem> Items { get; set; } = new();
 }

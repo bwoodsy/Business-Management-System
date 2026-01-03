@@ -19,6 +19,10 @@ public static class RepairJobMappings
             PartsCost = partsCost,
             Profit = job.SalePrice - partsCost,
             Notes = job.Notes,
+            Status = job.Status,
+            CompletedAt = job.CompletedAt,
+            IsReturnedToCustomer = job.IsReturnedToCustomer,
+            ReturnedAt = job.ReturnedAt,
             Items = job.Items.Select(i => new RepairJobItemDto
             {
                 ProductId = i.ProductId,
