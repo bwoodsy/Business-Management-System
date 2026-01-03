@@ -23,15 +23,39 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IRepairJobService, RepairJobService>();
 
 builder.Services
-    .AddIdentityCore<AppUser>()
+    .AddIdentityCore<AppUser>(options =>
+    {
+        // Relax password requirements for development
+        options.Password.RequiredLength = 6;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireDigit = false;
+    })
     .AddEntityFrameworkStores<AppDbContext>();
 
 var jwt = builder.Configuration.GetSection("Jwt");
-var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
+var jwtKey = jwt["Key"] ?? string.Empty;
+if (jwtKey.Length < 32)
+{
+    throw new InvalidOperationException("Jwt:Key must be at least 32 characters. Set the Jwt__Key environment variable for deployment.");
+}
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Cookies.TryGetValue("jwt", out var token) && !string.IsNullOrWhiteSpace(token))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            }
+        };
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -50,9 +74,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendDev", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -64,6 +89,7 @@ app.UseCors("FrontendDev");
 using (var scope = app.Services.CreateScope())
 {
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     var adminUser = "admin";
     var adminPass = "ChangeMe123!";
@@ -73,6 +99,20 @@ using (var scope = app.Services.CreateScope())
     {
         var user = new AppUser { UserName = adminUser };
         await userManager.CreateAsync(user, adminPass);
+    }
+
+    var jobsNeedingStatus = await db.RepairJobs
+        .Where(job => job.Status == null || job.Status == string.Empty)
+        .ToListAsync();
+
+    if (jobsNeedingStatus.Count > 0)
+    {
+        foreach (var job in jobsNeedingStatus)
+        {
+            job.Status = "New";
+        }
+
+        await db.SaveChangesAsync();
     }
 }
 

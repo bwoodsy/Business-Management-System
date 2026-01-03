@@ -1,0 +1,16 @@
+<form (ngSubmit)="onSubmit()" #registerForm="ngForm" class="auth-form">
+  <h2>Register</h2>
+  <div>
+    <label for="username">Username</label>
+    <input id="username" name="username" [(ngModel)]="username" required />
+  </div>
+  <div>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" [(ngModel)]="password" required />
+  </div>
+  <div *ngIf="auth.error()" class="error">{{ auth.error() }}</div>
+  <button type="submit" [disabled]="auth.loading()">Register</button>
+  <div class="switch-link">
+    <a routerLink="/login">Already have an account? Login</a>
+  </div>
+</form>
