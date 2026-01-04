@@ -161,6 +161,7 @@
   grid-auto-columns: minmax(220px, 1fr);
   gap: 12px;
   overflow-x: auto;
+  overflow-y: visible;
   padding-bottom: 6px;
 }
 
@@ -172,6 +173,7 @@
   min-height: 260px;
   display: grid;
   gap: 12px;
+  overflow: visible;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -197,6 +199,7 @@
 .kanban-list {
   display: grid;
   gap: 10px;
+  position: relative;
 }
 
 .kanban-card {
@@ -212,6 +215,19 @@
 
 .kanban-card:active {
   cursor: grabbing;
+}
+
+.kanban-card.is-editing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(15, 127, 108, 0.2);
+  z-index: 5;
+}
+
+.kanban-card.edit-card {
+  cursor: default;
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 10;
 }
 
 .card-title {
@@ -236,6 +252,27 @@
   color: var(--muted);
   display: grid;
   gap: 4px;
+}
+
+.edit-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.edit-items {
+  display: grid;
+  gap: 12px;
+}
+
+.edit-items h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .archive-controls select {

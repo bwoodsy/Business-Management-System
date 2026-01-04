@@ -8,7 +8,7 @@ import { RepairJobsService } from '../../services/repair-jobs.service';
 import { CategoryDto, CreateCategoryDto } from '../../models/category';
 import { CreateCustomerDto, CustomerDto } from '../../models/customer';
 import { CreateProductDto, ProductDto } from '../../models/product';
-import { CreateRepairJobDto, RepairJobDto, UpdateRepairJobStatusDto } from '../../models/repair-job';
+import { CreateRepairJobDto, RepairJobDto, UpdateRepairJobDto, UpdateRepairJobStatusDto } from '../../models/repair-job';
 import { catchError, finalize, map } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -17,13 +17,12 @@ type JobItemForm = {
   quantity: number;
 };
 
-type JobStatus = 'New' | 'In Progress' | 'Waiting Parts' | 'Ready' | 'Completed';
+type JobStatus = 'New' | 'Waiting Parts' | 'In Progress' | 'Completed';
 
 const JOB_STATUSES: { key: JobStatus; label: string }[] = [
   { key: 'New', label: 'New' },
-  { key: 'In Progress', label: 'In Progress' },
   { key: 'Waiting Parts', label: 'Waiting Parts' },
-  { key: 'Ready', label: 'Ready' },
+  { key: 'In Progress', label: 'In Progress' },
   { key: 'Completed', label: 'Completed' }
 ];
 
@@ -31,7 +30,7 @@ const STATUS_MAP: Record<string, JobStatus> = {
   'new': 'New',
   'in progress': 'In Progress',
   'waiting parts': 'Waiting Parts',
-  'ready': 'Ready',
+  'ready': 'In Progress',
   'completed': 'Completed'
 };
 
@@ -54,12 +53,21 @@ export class JobsComponent implements OnInit {
   draggingId: number | null = null;
   dragOverStatus: JobStatus | null = null;
   archiveSort: 'recent' | 'profit' | 'sale' = 'recent';
+  editingId: number | null = null;
+  savingEdit = false;
+  editMessage: string | null = null;
+  isDragging = false;
+  editItems: JobItemForm[] = [];
   groupedJobs: Record<JobStatus, RepairJobDto[]> = {
     'New': [],
-    'In Progress': [],
     'Waiting Parts': [],
-    'Ready': [],
+    'In Progress': [],
     'Completed': []
+  };
+  editJob: UpdateRepairJobDto = {
+    customerId: null,
+    salePrice: 0,
+    notes: ''
   };
 
   newJob: CreateRepairJobDto = {
@@ -236,32 +244,31 @@ export class JobsComponent implements OnInit {
   }
 
   updateJobStatus(job: RepairJobDto, status: JobStatus, isReturnedToCustomer?: boolean) {
+    const previous = {
+      status: job.status,
+      completedAt: job.completedAt,
+      isReturnedToCustomer: job.isReturnedToCustomer,
+      returnedAt: job.returnedAt
+    };
     const payload: UpdateRepairJobStatusDto = {
       status,
       isReturnedToCustomer
     };
 
+    this.applyJobStatus(job, status, isReturnedToCustomer);
+    this.rebuildColumns();
     this.updating = true;
     this.jobsService.updateStatus(job.id, payload).subscribe({
       next: () => {
-        job.status = status;
-        job.isReturnedToCustomer = isReturnedToCustomer ?? job.isReturnedToCustomer;
-        if (status === 'Completed' && !job.completedAt) {
-          job.completedAt = new Date().toISOString();
-        }
-        if (status !== 'Completed') {
-          job.completedAt = null;
-          job.isReturnedToCustomer = false;
-          job.returnedAt = null;
-        }
-        if (isReturnedToCustomer === true) {
-          job.returnedAt = new Date().toISOString();
-        }
-        this.rebuildColumns();
         this.updating = false;
       },
       error: (err) => {
         this.updating = false;
+        job.status = previous.status;
+        job.completedAt = previous.completedAt;
+        job.isReturnedToCustomer = previous.isReturnedToCustomer;
+        job.returnedAt = previous.returnedAt;
+        this.rebuildColumns();
         this.formMessage = err?.error?.message || 'Unable to update job status.';
       }
     });
@@ -273,6 +280,12 @@ export class JobsComponent implements OnInit {
 
   onDragStart(job: RepairJobDto) {
     this.draggingId = job.id;
+    this.isDragging = true;
+  }
+
+  onDragEnd() {
+    this.draggingId = null;
+    this.isDragging = false;
   }
 
   onDragOver(event: DragEvent, status: JobStatus) {
@@ -294,6 +307,82 @@ export class JobsComponent implements OnInit {
     if (!job || job.status === status) return;
 
     this.updateJobStatus(job, status);
+  }
+
+  startEdit(job: RepairJobDto, event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    if (this.isDragging) return;
+    if (this.editingId === job.id) {
+      this.cancelEdit();
+      return;
+    }
+    this.editingId = job.id;
+    this.editJob = {
+      customerId: job.customerId ?? null,
+      salePrice: job.salePrice,
+      notes: job.notes ?? ''
+    };
+    this.editItems =
+      job.items.length > 0
+        ? job.items.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+        : [{ productId: null, quantity: 1 }];
+    this.editMessage = null;
+  }
+
+  cancelEdit() {
+    this.editingId = null;
+    this.editMessage = null;
+    this.editItems = [];
+  }
+
+  saveEdit(job: RepairJobDto) {
+    this.editMessage = null;
+
+    const items = this.editItems
+      .filter((item) => !!item.productId && item.quantity > 0)
+      .map((item) => ({ productId: item.productId as number, quantity: item.quantity }));
+
+    if (!this.editJob.salePrice || this.editJob.salePrice <= 0) {
+      this.editMessage = 'Sale price must be greater than 0.';
+      return;
+    }
+
+    if (items.length === 0) {
+      this.editMessage = 'Add at least one product line item.';
+      return;
+    }
+
+    this.savingEdit = true;
+    const payload: UpdateRepairJobDto = {
+      ...this.editJob,
+      items
+    };
+    this.jobsService.update(job.id, payload).subscribe({
+      next: (updated) => {
+        job.customerId = updated.customerId;
+        job.customerName = updated.customerName;
+        job.salePrice = updated.salePrice;
+        job.notes = updated.notes;
+        job.items = updated.items;
+        job.partsCost = updated.partsCost;
+        job.profit = updated.profit;
+        this.savingEdit = false;
+        this.editingId = null;
+        this.editItems = [];
+      },
+      error: (err) => {
+        this.savingEdit = false;
+        this.editMessage = err?.error?.message || 'Unable to update job.';
+      }
+    });
+  }
+
+  addEditItemRow() {
+    this.editItems = [...this.editItems, { productId: null, quantity: 1 }];
+  }
+
+  removeEditItemRow(index: number) {
+    this.editItems = this.editItems.filter((_, i) => i !== index);
   }
 
   markReturned(job: RepairJobDto) {
@@ -375,9 +464,8 @@ export class JobsComponent implements OnInit {
   private rebuildColumns() {
     const grouped: Record<JobStatus, RepairJobDto[]> = {
       'New': [],
-      'In Progress': [],
       'Waiting Parts': [],
-      'Ready': [],
+      'In Progress': [],
       'Completed': []
     };
 
@@ -387,5 +475,21 @@ export class JobsComponent implements OnInit {
     }
 
     this.groupedJobs = grouped;
+  }
+
+  private applyJobStatus(job: RepairJobDto, status: JobStatus, isReturnedToCustomer?: boolean) {
+    job.status = status;
+    job.isReturnedToCustomer = isReturnedToCustomer ?? job.isReturnedToCustomer;
+    if (status === 'Completed' && !job.completedAt) {
+      job.completedAt = new Date().toISOString();
+    }
+    if (status !== 'Completed') {
+      job.completedAt = null;
+      job.isReturnedToCustomer = false;
+      job.returnedAt = null;
+    }
+    if (isReturnedToCustomer === true) {
+      job.returnedAt = new Date().toISOString();
+    }
   }
 }

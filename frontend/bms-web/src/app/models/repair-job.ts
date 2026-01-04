@@ -38,3 +38,15 @@ export interface UpdateRepairJobStatusDto {
   status: string;
   isReturnedToCustomer?: boolean;
 }
+
+export interface UpdateRepairJobItemDto {
+  productId: number;
+  quantity: number;
+}
+
+export interface UpdateRepairJobDto {
+  customerId?: number | null;
+  salePrice: number;
+  notes?: string | null;
+  items?: UpdateRepairJobItemDto[];
+}

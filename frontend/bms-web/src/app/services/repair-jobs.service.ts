@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
-import { CreateRepairJobDto, RepairJobDto, UpdateRepairJobStatusDto } from '../models/repair-job';
+import { CreateRepairJobDto, RepairJobDto, UpdateRepairJobDto, UpdateRepairJobStatusDto } from '../models/repair-job';
 
 @Injectable({ providedIn: 'root' })
 export class RepairJobsService {
@@ -19,5 +19,9 @@ export class RepairJobsService {
 
   updateStatus(id: number, dto: UpdateRepairJobStatusDto) {
     return this.http.put<void>(`${this.baseUrl}/${id}/status`, dto);
+  }
+
+  update(id: number, dto: UpdateRepairJobDto) {
+    return this.http.put<RepairJobDto>(`${this.baseUrl}/${id}`, dto);
   }
 }
