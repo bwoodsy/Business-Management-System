@@ -4,5 +4,5 @@ namespace BusinessManagementSystem.Api.Services;
 
 public interface IRepairJobService
 {
-    Task<RepairJobDto> CreateAsync(CreateRepairJobDto dto);
+    Task<RepairJobDto> CreateAsync(CreateRepairJobDto dto, string userId);
 }

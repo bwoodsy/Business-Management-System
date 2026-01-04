@@ -15,8 +15,11 @@ public class RepairJobService : IRepairJobService
         _context = context;
     }
 
-    public async Task<RepairJobDto> CreateAsync(CreateRepairJobDto dto)
+    public async Task<RepairJobDto> CreateAsync(CreateRepairJobDto dto, string userId)
     {
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new InvalidOperationException("User is not authenticated.");
+
         // transaction = all-or-nothing (critical for stock changes)
         await using var tx = await _context.Database.BeginTransactionAsync();
 
@@ -32,14 +35,14 @@ public class RepairJobService : IRepairJobService
         var productIds = dto.Items.Select(i => i.ProductId).Distinct().ToList();
 
         var products = await _context.Products
-            .Where(p => productIds.Contains(p.Id))
+            .Where(p => productIds.Contains(p.Id) && p.OwnerId == userId)
             .ToDictionaryAsync(p => p.Id);
 
         // Validate products exist
         foreach (var pid in productIds)
         {
             if (!products.ContainsKey(pid))
-                throw new InvalidOperationException($"ProductId {pid} does not exist.");
+                throw new InvalidOperationException($"ProductId {pid} does not exist or is not accessible.");
         }
 
         // Validate stock + decrement
