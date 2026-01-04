@@ -107,19 +107,75 @@
         <span>Price</span>
         <span>Stock</span>
         <span>Value</span>
+        <span>Actions</span>
       </div>
-      <div class="table-row" *ngFor="let p of filteredProducts(); trackBy: trackById">
-        <div class="cell title">
-          <span class="title-main">{{ p.name }}</span>
-          <span class="title-sub">SKU {{ p.id }}</span>
+      <ng-container *ngFor="let p of filteredProducts(); trackBy: trackById">
+        <div class="table-row">
+          <div class="cell title">
+            <span class="title-main">{{ p.name }}</span>
+            <span class="title-sub">SKU {{ p.id }}</span>
+          </div>
+          <div class="cell">{{ p.categoryName || 'Unassigned' }}</div>
+          <div class="cell">{{ formatMoney(p.price) }}</div>
+          <div class="cell">
+            <span class="pill" [class.low]="p.stock <= 5">{{ p.stock }}</span>
+          </div>
+          <div class="cell">{{ formatMoney(p.price * p.stock) }}</div>
+          <div class="cell actions-cell">
+            <button class="ghost small" type="button" (click)="startEdit(p)" [disabled]="savingEdit()">
+              Edit
+            </button>
+          </div>
         </div>
-        <div class="cell">{{ p.categoryName || 'Unassigned' }}</div>
-        <div class="cell">{{ formatMoney(p.price) }}</div>
-        <div class="cell">
-          <span class="pill" [class.low]="p.stock <= 5">{{ p.stock }}</span>
+        <div class="table-row edit-row" *ngIf="editingId() === p.id">
+          <div class="cell edit-cell">
+            <div class="edit-grid">
+              <label class="field">
+                <span>Name</span>
+                <input [(ngModel)]="editProduct.name" [ngModelOptions]="{standalone: true}" />
+              </label>
+              <label class="field">
+                <span>Category</span>
+                <select [(ngModel)]="editProduct.categoryId" [ngModelOptions]="{standalone: true}">
+                  <option [ngValue]="0">Select category</option>
+                  <option *ngFor="let category of categories()" [ngValue]="category.id">
+                    {{ category.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Price</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [(ngModel)]="editProduct.price"
+                  [ngModelOptions]="{standalone: true}"
+                />
+              </label>
+              <label class="field">
+                <span>Stock</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  [(ngModel)]="editProduct.stock"
+                  [ngModelOptions]="{standalone: true}"
+                />
+              </label>
+            </div>
+            <div class="edit-actions">
+              <button class="primary" type="button" (click)="saveEdit(p)" [disabled]="savingEdit()">
+                {{ savingEdit() ? 'Saving...' : 'Save changes' }}
+              </button>
+              <button class="ghost" type="button" (click)="cancelEdit()" [disabled]="savingEdit()">
+                Cancel
+              </button>
+            </div>
+            <div class="form-message" *ngIf="editMessage()">{{ editMessage() }}</div>
+          </div>
         </div>
-        <div class="cell">{{ formatMoney(p.price * p.stock) }}</div>
-      </div>
+      </ng-container>
     </div>
   </div>
 </section>

@@ -5,6 +5,7 @@ using BusinessManagementSystem.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace BusinessManagementSystem.Api.Controllers;
 
@@ -24,9 +25,13 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
         var products = await _context.Products
             .AsNoTracking()
             .Include(p => p.Category)              // needed for CategoryName
+            .Where(p => p.OwnerId == userId)
             .OrderBy(p => p.Name)
             .ToListAsync();
 
@@ -37,10 +42,13 @@ public class ProductsController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ProductDto>> GetById(int id)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
         var product = await _context.Products
             .AsNoTracking()
             .Include(p => p.Category)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == userId);
 
         if (product == null) return NotFound();
 
@@ -51,12 +59,16 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ProductDto>> Create(CreateProductDto dto)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
         // optional: validate category exists (nice polish)
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId);
         if (!categoryExists)
             return BadRequest(new { message = $"CategoryId {dto.CategoryId} does not exist." });
 
         var product = dto.ToEntity();
+        product.OwnerId = userId;
 
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
@@ -71,7 +83,10 @@ public class ProductsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, UpdateProductDto dto)
     {
-        var product = await _context.Products.FindAsync(id);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == userId);
         if (product == null) return NotFound();
 
         // optional: validate category exists
@@ -89,7 +104,10 @@ public class ProductsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var product = await _context.Products.FindAsync(id);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == userId);
         if (product == null) return NotFound();
 
         _context.Products.Remove(product);

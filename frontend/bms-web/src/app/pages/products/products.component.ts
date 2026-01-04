@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CategoriesService } from '../../services/categories';
 import { ProductsService } from '../../services/products.service';
 import { CategoryDto, CreateCategoryDto } from '../../models/category';
-import { CreateProductDto, ProductDto } from '../../models/product';
+import { CreateProductDto, ProductDto, UpdateProductDto } from '../../models/product';
 
 @Component({
   selector: 'app-products',
@@ -22,7 +22,16 @@ export class ProductsComponent implements OnInit {
   showForm = signal(false);
   creating = signal(false);
   formMessage = signal<string | null>(null);
+  editingId = signal<number | null>(null);
+  savingEdit = signal(false);
+  editMessage = signal<string | null>(null);
   newProduct: CreateProductDto = {
+    name: '',
+    price: 0,
+    stock: 0,
+    categoryId: 0
+  };
+  editProduct: UpdateProductDto = {
     name: '',
     price: 0,
     stock: 0,
@@ -136,6 +145,65 @@ export class ProductsComponent implements OnInit {
       },
       error: (err) => {
         this.formMessage.set(err?.error?.message || 'Unable to create category.');
+      }
+    });
+  }
+
+  startEdit(product: ProductDto) {
+    this.editingId.set(product.id);
+    this.editProduct = {
+      name: product.name,
+      price: product.price,
+      stock: product.stock,
+      categoryId: product.categoryId
+    };
+    this.editMessage.set(null);
+  }
+
+  cancelEdit() {
+    this.editingId.set(null);
+    this.editMessage.set(null);
+  }
+
+  saveEdit(product: ProductDto) {
+    this.editMessage.set(null);
+
+    if (!this.editProduct.name.trim()) {
+      this.editMessage.set('Product name is required.');
+      return;
+    }
+
+    if (!this.editProduct.categoryId) {
+      this.editMessage.set('Select a category.');
+      return;
+    }
+
+    if (this.editProduct.stock < 0) {
+      this.editMessage.set('Stock cannot be negative.');
+      return;
+    }
+
+    this.savingEdit.set(true);
+    this.productsService.update(product.id, this.editProduct).subscribe({
+      next: () => {
+        const categoryName =
+          this.categories().find((c) => c.id === this.editProduct.categoryId)?.name ??
+          product.categoryName ??
+          null;
+        const updated: ProductDto = {
+          ...product,
+          ...this.editProduct,
+          categoryName
+        };
+        this.products.update((items) =>
+          items.map((item) => (item.id === product.id ? updated : item))
+        );
+        this.savingEdit.set(false);
+        this.editingId.set(null);
+      },
+      error: (err) => {
+        this.savingEdit.set(false);
+        this.editMessage.set(err?.error?.message || 'Unable to update product.');
       }
     });
   }
