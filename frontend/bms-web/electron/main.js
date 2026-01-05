@@ -33,8 +33,9 @@ function startBackend() {
   if (process.env.BMS_SKIP_API === '1') return;
 
   if (app.isPackaged) {
-    const apiPath = process.env.BMS_API_PATH;
-    if (!apiPath) return;
+    const defaultExe = path.join(process.resourcesPath, 'api', 'BusinessManagementSystem.Api.exe');
+    const apiPath = process.env.BMS_API_PATH || defaultExe;
+    if (!fs.existsSync(apiPath)) return;
     backendProcess = spawn(apiPath, [], { stdio: 'inherit' });
     return;
   }

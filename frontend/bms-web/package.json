@@ -9,9 +9,10 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "api:dev": "dotnet run --project ..\\\\..\\\\backend\\\\BusinessManagementSystem.Api",
+    "api:publish:win": "dotnet publish ..\\\\..\\\\backend\\\\BusinessManagementSystem.Api -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o electron\\\\resources\\\\api-win",
     "electron": "electron .",
     "electron:dev": "concurrently -k \"npm run api:dev\" \"npm run start\" \"wait-on http://localhost:4200 && electron .\"",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "npm run api:publish:win && npm run build && electron-builder"
   },
   "prettier": {
     "printWidth": 100,
@@ -60,12 +61,17 @@
       "electron/**",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "electron/resources/api-win",
+        "to": "api"
+      }
+    ],
     "directories": {
       "buildResources": "electron/resources"
-    }, 
+    },
     "publish": [
-  { "provider": "github", "owner": "bwoodsy", "repo": "Business-Management-System" }
-]
-
+      { "provider": "github", "owner": "bwoodsy", "repo": "Business-Management-System" }
+    ]
   }
 }
