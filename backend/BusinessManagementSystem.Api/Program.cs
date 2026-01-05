@@ -74,7 +74,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendDev", policy =>
     {
-        policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
+        policy.SetIsOriginAllowed(origin =>
+                string.IsNullOrWhiteSpace(origin) ||
+                origin == "null" ||
+                origin == "http://localhost:4200" ||
+                origin == "https://localhost:4200")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
