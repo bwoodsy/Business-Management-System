@@ -15,8 +15,20 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=business.db";
+var dbPath = Environment.GetEnvironmentVariable("BMS_DB_PATH");
+if (!string.IsNullOrWhiteSpace(dbPath))
+{
+    var directory = Path.GetDirectoryName(dbPath);
+    if (!string.IsNullOrWhiteSpace(directory))
+    {
+        Directory.CreateDirectory(directory);
+    }
+    connectionString = $"Data Source={dbPath}";
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(connectionString));
 
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -34,11 +46,55 @@ builder.Services
     })
     .AddEntityFrameworkStores<AppDbContext>();
 
+// Read JWT config section for Issuer/Audience
 var jwt = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwt["Key"] ?? string.Empty;
+// Read JWT key from environment variable first (highest priority), then appsettings
+var jwtKey = Environment.GetEnvironmentVariable("Jwt__Key")
+    ?? jwt["Key"]
+    ?? string.Empty;
+
 if (jwtKey.Length < 32)
 {
-    throw new InvalidOperationException("Jwt:Key must be at least 32 characters. Set the Jwt__Key environment variable for deployment.");
+    var allowDesktopFallback =
+        builder.Environment.IsDevelopment() ||
+        string.Equals(Environment.GetEnvironmentVariable("BMS_DESKTOP"), "1", StringComparison.OrdinalIgnoreCase);
+    if (allowDesktopFallback)
+    {
+        jwtKey = "bms_desktop_local_key_please_change_32chars_min_0001";
+    }
+    else
+    {
+        throw new InvalidOperationException("Jwt:Key must be at least 32 characters. Set the Jwt__Key environment variable for deployment.");
+    }
+}
+// CRITICAL: Set the key in configuration so AuthController reads the same value
+builder.Configuration["Jwt:Key"] = jwtKey;
+try
+{
+    var jwtLogDbPath = Environment.GetEnvironmentVariable("BMS_DB_PATH");
+    var logDir = !string.IsNullOrWhiteSpace(jwtLogDbPath) ? Path.GetDirectoryName(jwtLogDbPath) : AppContext.BaseDirectory;
+    if (!string.IsNullOrWhiteSpace(logDir))
+    {
+        Directory.CreateDirectory(logDir);
+        var logPath = Path.Combine(logDir, "jwt-debug.txt");
+        var envKey = Environment.GetEnvironmentVariable("Jwt__Key");
+        var configKey = builder.Configuration.GetSection("Jwt")["Key"];
+        File.WriteAllText(logPath, string.Join(Environment.NewLine, new[]
+        {
+            $"timestamp={DateTime.UtcNow:O}",
+            $"jwtKeyLength={jwtKey.Length}",
+            $"jwtKeyPrefix={jwtKey.Substring(0, Math.Min(10, jwtKey.Length))}...",
+            $"envKeyLength={envKey?.Length ?? 0}",
+            $"configKeyLength={configKey?.Length ?? 0}",
+            $"appBaseDir={AppContext.BaseDirectory}",
+            $"bmsDesktop={Environment.GetEnvironmentVariable("BMS_DESKTOP")}",
+            ""
+        }));
+    }
+}
+catch
+{
+    // Ignore logging failures to avoid blocking startup.
 }
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
@@ -49,7 +105,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnMessageReceived = context =>
             {
-                if (context.Request.Cookies.TryGetValue("jwt", out var token) && !string.IsNullOrWhiteSpace(token))
+                if (string.IsNullOrWhiteSpace(context.Token) &&
+                    context.Request.Cookies.TryGetValue("jwt", out var token) &&
+                    !string.IsNullOrWhiteSpace(token))
                 {
                     context.Token = token;
                 }
@@ -75,10 +133,22 @@ builder.Services.AddCors(options =>
     options.AddPolicy("FrontendDev", policy =>
     {
         policy.SetIsOriginAllowed(origin =>
-                string.IsNullOrWhiteSpace(origin) ||
-                origin == "null" ||
-                origin == "http://localhost:4200" ||
-                origin == "https://localhost:4200")
+            {
+                if (string.IsNullOrWhiteSpace(origin) || origin == "null")
+                {
+                    return true;
+                }
+
+                if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                {
+                    var isHttp = uri.Scheme == "http" || uri.Scheme == "https";
+                    var isLocalhost = string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(uri.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase);
+                    return isHttp && isLocalhost;
+                }
+
+                return false;
+            })
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -94,6 +164,8 @@ using (var scope = app.Services.CreateScope())
 {
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    await db.Database.MigrateAsync();
 
     var adminUser = "admin";
     var adminPass = "ChangeMe123!";
@@ -126,7 +198,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection when not in desktop mode (desktop uses HTTP locally)
+var isDesktopMode = string.Equals(Environment.GetEnvironmentVariable("BMS_DESKTOP"), "1", StringComparison.OrdinalIgnoreCase);
+if (!isDesktopMode)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

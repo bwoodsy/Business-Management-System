@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './guards/auth.guard';
+import { authGuard, redirectIfAuthenticatedGuard } from './guards/auth.guard';
 
 import { Shell } from './layout/shell/shell';
 import { ProductsComponent } from './pages/products/products.component';
@@ -9,8 +9,8 @@ import { LoginComponent } from './pages/login/login.component';
 import { RegisterComponent } from './pages/register/register.component';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
+  { path: 'login', component: LoginComponent, canActivate: [redirectIfAuthenticatedGuard] },
+  { path: 'register', component: RegisterComponent, canActivate: [redirectIfAuthenticatedGuard] },
   {
     path: '',
     component: Shell,
