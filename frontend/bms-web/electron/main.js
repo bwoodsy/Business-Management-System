@@ -285,10 +285,9 @@ app.whenReady().then(async () => {
 
   await createWindow();
 
-  // TODO: Re-enable after publishing fixed version to GitHub
-  // if (app.isPackaged) {
-  //   autoUpdater.checkForUpdatesAndNotify();
-  // }
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
 });
 
 app.on('window-all-closed', () => {
